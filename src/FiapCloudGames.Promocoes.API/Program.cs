@@ -1,0 +1,91 @@
+using FiapCloudGames.Jogos.Core.Interfaces.Repositories;
+using FiapCloudGames.Jogos.Infra.Repositories;
+using FiapCloudGames.Promocoes.API.Middlewares;
+using FiapCloudGames.Promocoes.Core.Entities.Identity;
+using FiapCloudGames.Promocoes.Core.Interfaces.Services;
+using FiapCloudGames.Promocoes.Core.Services;
+using FiapCloudGames.Promocoes.Infra.Data;
+using FiapCloudGames.Promocoes.Infra.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Serilog;
+using Serilog.Events;
+using System.Text;
+using System.Text.Json.Serialization;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+});
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+string connectionString = builder.Configuration.GetConnectionString("default");
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddDefaultTokenProviders();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}
+ )
+   .AddJwtBearer(options =>
+   {
+       options.SaveToken = true;
+       options.RequireHttpsMetadata = false;
+       options.TokenValidationParameters = new TokenValidationParameters
+       {
+           ValidateIssuer = true,
+           ValidateAudience = true,
+           ValidAudience = builder.Configuration["JWT:ValidAudience"],
+           ValidIssuer = builder.Configuration["JWT:ValidIssuer"],
+           ClockSkew = TimeSpan.Zero,
+           IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:secret"]))
+       };
+   }
+);
+
+builder.Services.AddScoped<IPromocaoService, PromocaoService>();
+
+builder.Services.AddScoped<IJogoRepository, JogoRepository>();
+builder.Services.AddScoped<IPromocaoRepository, PromocaoRepository>();
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .WriteTo.File(
+        path: "Logs/log.json",
+        rollingInterval: RollingInterval.Day,
+        formatter: new Serilog.Formatting.Json.JsonFormatter(),
+        restrictedToMinimumLevel: LogEventLevel.Information
+    )
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+var app = builder.Build();
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+app.UseMiddleware<ExceptionHandlerMiddleware>();
+app.UseMiddleware<LogDeRequisicaoMiddleware>();
+
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapControllers();
+app.Run();

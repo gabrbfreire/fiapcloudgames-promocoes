@@ -1,0 +1,14 @@
+﻿using FiapCloudGames.Promocoes.Core.Entities;
+
+namespace FiapCloudGames.Promocoes.Core.Interfaces.Services;
+
+public interface IPromocaoService
+{
+    Task<Promocao> CriarPromocaoAsync(string nome, int percentualDeDesconto, DateTime dataInicio, DateTime dataFim);
+    Task<Promocao> ObterPromocaoPorIdAsync(Guid id);
+    Task<IEnumerable<Promocao>> ListarPromocoesAtivasAsync(DateTime dataReferencia);
+    Task AdicionarJogoAPromocaoAsync(Guid promocaoId, Guid jogoId);
+    Task RemoverJogoDaPromocaoAsync(Guid promocaoId, Guid jogoId);
+    Task<bool> VerificarSePromocaoEstaAtivaAsync(Guid promocaoId, DateTime data);
+    Task<bool> RemoverPromocaoAsync(Guid id);
+}
