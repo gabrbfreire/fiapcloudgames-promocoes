@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Promocoes
 
 on:
   push:
@@ -21,21 +21,21 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-            -t fcgregistrygabrielfg.azurecr.io/fiapcloudgames-promocoes:latest \
+            -t fiapcloudgamesacr1.azurecr.io/fiapcloudgames-promocoes:latest \
             .
 
       - name: Login to ACR
         run: |
-          az acr login --name fcgregistrygabrielfg
+          az acr login --name fiapcloudgamesacr1
 
       - name: Push Docker image to ACR
         run: |
-          docker push fcgregistrygabrielfg.azurecr.io/fiapcloudgames-promocoes:latest
+          docker push fiapcloudgamesacr1.azurecr.io/fiapcloudgames-promocoes:latest
 
       - name: Deploy to Azure Web App
         run: |
           az webapp config container set \
             --name fiapcloudgames-promocoes-app \
             --resource-group fiapcloudgames-rg \
-            --docker-custom-image-name fcgregistrygabrielfg.azurecr.io/fiapcloudgames-promocoes:latest \
-            --docker-registry-server-url https://fcgregistrygabrielfg.azurecr.io
+            --docker-custom-image-name fiapcloudgamesacr1.azurecr.io/fiapcloudgames-promocoes:latest \
+            --docker-registry-server-url https://fiapcloudgamesacr1.azurecr.io
